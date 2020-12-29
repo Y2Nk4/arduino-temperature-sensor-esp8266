@@ -1,0 +1,2 @@
+DeviceRegisterRequest.device_name max_size:32
+DeviceRegisterRequest.device_type max_size:32

@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+message TemperatureNodeReport {
+	repeated float temperature = 1;
+	repeated float humidity = 2;
+	float battery_vcc = 3;
+	uint32 rec_delta = 4;
+}

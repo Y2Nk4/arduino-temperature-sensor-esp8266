@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+message DiscoverRequest{
+    uint32 req_flag = 1;
+    uint32 discover_port = 2;
+}
+message DiscoverResponse{
+    uint32 response_flag = 1;
+    uint32 sensor_center_mqtt_port = 2;
+    string register_topic = 3;
+}
+
+message DeviceRegisterRequest {
+    string device_name = 1;
+    string device_type = 2;
+    uint64 device_mac = 3;
+}
+message DeviceRegisterResponse {
+    bool success = 1;
+}
+
+message DeviceConfig {
+    uint32 mqtt_ip = 1;
+    uint32 mqtt_port = 2;
+    string register_topic = 3;
+}
