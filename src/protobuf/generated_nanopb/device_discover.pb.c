@@ -21,4 +21,10 @@ PB_BIND(DeviceRegisterResponse, DeviceRegisterResponse, AUTO)
 PB_BIND(DeviceConfig, DeviceConfig, AUTO)
 
 
+PB_BIND(RunRecord, RunRecord, AUTO)
+
+
+PB_BIND(TemperatureRecord, TemperatureRecord, AUTO)
+
+
 

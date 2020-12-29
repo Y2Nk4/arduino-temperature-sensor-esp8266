@@ -18,6 +18,7 @@ typedef struct _DeviceConfig {
     uint32_t mqtt_ip;
     uint32_t mqtt_port;
     pb_callback_t register_topic;
+    bool is_registered;
 } DeviceConfig;
 
 typedef struct _DeviceRegisterRequest {
@@ -41,23 +42,38 @@ typedef struct _DiscoverResponse {
     pb_callback_t register_topic;
 } DiscoverResponse;
 
+typedef struct _RunRecord {
+    uint32_t run_count;
+    pb_callback_t temperature_record;
+} RunRecord;
+
+typedef struct _TemperatureRecord {
+    float temperature_value;
+    uint32_t delta;
+} TemperatureRecord;
+
 
 /* Initializer values for message structs */
 #define DiscoverRequest_init_default             {0, 0}
 #define DiscoverResponse_init_default            {0, 0, {{NULL}, NULL}}
 #define DeviceRegisterRequest_init_default       {"", "", 0}
 #define DeviceRegisterResponse_init_default      {0}
-#define DeviceConfig_init_default                {0, 0, {{NULL}, NULL}}
+#define DeviceConfig_init_default                {0, 0, {{NULL}, NULL}, 0}
+#define RunRecord_init_default                   {0, {{NULL}, NULL}}
+#define TemperatureRecord_init_default           {0, 0}
 #define DiscoverRequest_init_zero                {0, 0}
 #define DiscoverResponse_init_zero               {0, 0, {{NULL}, NULL}}
 #define DeviceRegisterRequest_init_zero          {"", "", 0}
 #define DeviceRegisterResponse_init_zero         {0}
-#define DeviceConfig_init_zero                   {0, 0, {{NULL}, NULL}}
+#define DeviceConfig_init_zero                   {0, 0, {{NULL}, NULL}, 0}
+#define RunRecord_init_zero                      {0, {{NULL}, NULL}}
+#define TemperatureRecord_init_zero              {0, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define DeviceConfig_mqtt_ip_tag                 1
 #define DeviceConfig_mqtt_port_tag               2
 #define DeviceConfig_register_topic_tag          3
+#define DeviceConfig_is_registered_tag           4
 #define DeviceRegisterRequest_device_name_tag    1
 #define DeviceRegisterRequest_device_type_tag    2
 #define DeviceRegisterRequest_device_mac_tag     3
@@ -67,6 +83,10 @@ typedef struct _DiscoverResponse {
 #define DiscoverResponse_response_flag_tag       1
 #define DiscoverResponse_sensor_center_mqtt_port_tag 2
 #define DiscoverResponse_register_topic_tag      3
+#define RunRecord_run_count_tag                  1
+#define RunRecord_temperature_record_tag         2
+#define TemperatureRecord_temperature_value_tag  1
+#define TemperatureRecord_delta_tag              2
 
 /* Struct field encoding specification for nanopb */
 #define DiscoverRequest_FIELDLIST(X, a) \
@@ -97,15 +117,31 @@ X(a, STATIC,   SINGULAR, BOOL,     success,           1)
 #define DeviceConfig_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   mqtt_ip,           1) \
 X(a, STATIC,   SINGULAR, UINT32,   mqtt_port,         2) \
-X(a, CALLBACK, SINGULAR, STRING,   register_topic,    3)
+X(a, CALLBACK, SINGULAR, STRING,   register_topic,    3) \
+X(a, STATIC,   SINGULAR, BOOL,     is_registered,     4)
 #define DeviceConfig_CALLBACK pb_default_field_callback
 #define DeviceConfig_DEFAULT NULL
+
+#define RunRecord_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   run_count,         1) \
+X(a, CALLBACK, REPEATED, MESSAGE,  temperature_record,   2)
+#define RunRecord_CALLBACK pb_default_field_callback
+#define RunRecord_DEFAULT NULL
+#define RunRecord_temperature_record_MSGTYPE TemperatureRecord
+
+#define TemperatureRecord_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, FLOAT,    temperature_value,   1) \
+X(a, STATIC,   SINGULAR, UINT32,   delta,             2)
+#define TemperatureRecord_CALLBACK NULL
+#define TemperatureRecord_DEFAULT NULL
 
 extern const pb_msgdesc_t DiscoverRequest_msg;
 extern const pb_msgdesc_t DiscoverResponse_msg;
 extern const pb_msgdesc_t DeviceRegisterRequest_msg;
 extern const pb_msgdesc_t DeviceRegisterResponse_msg;
 extern const pb_msgdesc_t DeviceConfig_msg;
+extern const pb_msgdesc_t RunRecord_msg;
+extern const pb_msgdesc_t TemperatureRecord_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define DiscoverRequest_fields &DiscoverRequest_msg
@@ -113,6 +149,8 @@ extern const pb_msgdesc_t DeviceConfig_msg;
 #define DeviceRegisterRequest_fields &DeviceRegisterRequest_msg
 #define DeviceRegisterResponse_fields &DeviceRegisterResponse_msg
 #define DeviceConfig_fields &DeviceConfig_msg
+#define RunRecord_fields &RunRecord_msg
+#define TemperatureRecord_fields &TemperatureRecord_msg
 
 /* Maximum encoded size of messages (where known) */
 #define DiscoverRequest_size                     12
@@ -120,6 +158,8 @@ extern const pb_msgdesc_t DeviceConfig_msg;
 #define DeviceRegisterRequest_size               77
 #define DeviceRegisterResponse_size              2
 /* DeviceConfig_size depends on runtime parameters */
+/* RunRecord_size depends on runtime parameters */
+#define TemperatureRecord_size                   11
 
 #ifdef __cplusplus
 } /* extern "C" */

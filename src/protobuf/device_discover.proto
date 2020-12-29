@@ -23,4 +23,15 @@ message DeviceConfig {
     uint32 mqtt_ip = 1;
     uint32 mqtt_port = 2;
     string register_topic = 3;
+    bool is_registered = 4;
+}
+
+message RunRecord {
+    uint32 run_count = 1;
+    repeated TemperatureRecord temperature_record = 2;
+}
+
+message TemperatureRecord {
+    float temperature_value = 1;
+    uint32 delta = 2;
 }

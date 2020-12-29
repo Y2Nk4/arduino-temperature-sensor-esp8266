@@ -4,10 +4,9 @@
  Author:	11476
 */
 
-//#define DEBUG
+#define DEBUG
 
 #include "lib/debug.h"
-#include "lib/helpers.h"
 
 #include "user_interface.h"
 #include "Esp.h"
@@ -26,7 +25,10 @@
 #include <MQTT.h>
 #include <FS.h>
 
-#define DHTPIN 4
+#include "lib/helpers.h"
+#include "lib/storage.h"
+
+#define DHTPIN 0
 #define DHTTYPE DHT22
 
 #define WIFINAME "ASUS-Home_2.4G"  
@@ -34,6 +36,7 @@
 #define BROADCASR_PORT 1483
 #define UDPDiscoverPort 11213
 #define ConfigFilename "./config.dat"
+#define RunRecordFilename "./record.dat"
 #define MQTT_ID_PREFIX "temp-node-"
 
 WiFiUDP Udp;
@@ -42,6 +45,8 @@ DHT dht(DHTPIN, DHTTYPE);
 MQTTClient mqttClient;
 WiFiClient net;
 bool isRegistered = false;
+bool isConnectedToWifi = false;
+bool isConnectedToMQTT = false;
 
 void messageReceived(MQTTClient* client, char topic[], char buffer[], int payloadLength) {
     LogReceivedMessage(topic, buffer, payloadLength);
@@ -66,15 +71,7 @@ void messageReceived(MQTTClient* client, char topic[], char buffer[], int payloa
 void setup() {
     // put your setup code here, to run once:
     #ifdef DEBUG
-    Serial.begin(115200);
-    #endif
-
-    connectToWifi();
-    dht.begin();
-    delay(200);
-
-    #ifdef DEBUG
-    Serial.println("Debug Mode");
+        Serial.begin(115200);
     #endif
 
     bool isMountSPIFFSSuccess = SPIFFS.begin();
@@ -82,32 +79,80 @@ void setup() {
         Serial.println("Error occurred while mounting the SPIFFS");
         return;
     }
+    dht.begin();
+
     DeviceConfig deviceConf = loadLocalDeviceConf();
-    // DeviceConfig deviceConf = discoverCenter();
+    if (!deviceConf.is_registered) {
+        // register device in the SensorCenter
+        // if it has not registered yet
 
-    Serial.println("storage data:");
-    Serial.println((unsigned int)deviceConf.mqtt_port);
-    Serial.println((unsigned int)deviceConf.mqtt_ip);
+        connectToWifi();
+        // have not registered yet
+        if (!deviceConf.mqtt_ip) {
+            deviceConf = discoverCenter();
+        }
 
-    IPAddress mqtt_ip = IPAddress((unsigned int)deviceConf.mqtt_ip);
+        // prepare to register
+        Serial.println("storage data:");
+        Serial.println(deviceConf.mqtt_port);
+        Serial.println(deviceConf.mqtt_ip);
 
-    Serial.println(mqtt_ip.toString());
+        IPAddress mqtt_ip = IPAddress(deviceConf.mqtt_ip);
+        Serial.println(mqtt_ip.toString());
 
-    Serial.print("\nconnecting to mqtt...");
+        Serial.print("\nconnecting to mqtt...");
+        String wifiMacString = WiFi.macAddress();
+        String deviceId = MQTT_ID_PREFIX + wifiMacString;
+
+        connectToMQTT(mqtt_ip, deviceConf.mqtt_port, deviceId);
+
+        bool result = registerDevice(deviceConf);
+        if (result) {
+            deviceConf.is_registered = true;
+            saveDeviceConfig(deviceConf);
+        }
+    }
+
+    RunRecord runRec = loadLocalRunRecord();
+    if (runRec.run_count < 5) {
+        while (true) {
+            float t = dht.readTemperature();
+            Serial.print(F("Temperature: "));
+            Serial.println(t);
+            delay(2000);
+        }
+    }
+
+    Serial.println("Done!");
+    WiFi.disconnect();
+
+    ESP.deepSleep(15e6);
+}
+
+boolean connectToMQTT(const IPAddress brokerIP, const unsigned int brokerPort, const String& deviceId) {
+    if (!isConnectedToMQTT) {
+        mqttClient.onMessageAdvanced(messageReceived);
+        mqttClient.begin(brokerIP, (int)brokerPort, net);
+        while (!mqttClient.connect(deviceId.c_str())) {
+            Serial.print(".");
+            delay(200);
+        }
+        isConnectedToMQTT = true;
+        Serial.println("Connected to MQTT");
+        return true;
+    }
+    else {
+        return isConnectedToMQTT;
+    }
+}
+
+boolean registerDevice(DeviceConfig& deviceConf) {
+    DeviceRegisterRequest regReq = DeviceRegisterRequest_init_zero;
     String wifiMacString = WiFi.macAddress();
     String deviceId = MQTT_ID_PREFIX + wifiMacString;
-    mqttClient.begin(mqtt_ip, (int)deviceConf.mqtt_port, net);
-    mqttClient.onMessageAdvanced(messageReceived);
-    while (!mqttClient.connect(deviceId.c_str())) {
-        Serial.print(".");
-        delay(1000);
-    }
-    Serial.println("Connected to MQTT");
-    
-    DeviceRegisterRequest regReq = DeviceRegisterRequest_init_zero;
 
     deviceId.toCharArray(regReq.device_name, 31);
-    String device_type_s = "temp-sensor";
+    String device_type_s = "temperature-sensor";
     device_type_s.toCharArray(regReq.device_type, 31);
 
     for (unsigned int i = 0; i < 32; i++) {
@@ -116,80 +161,45 @@ void setup() {
 
     uint64_t macAddr = getMacAddr();
     regReq.device_mac = macAddr;
-    // regReq.device_mac = 152006086161916;
 
-    uint8_t buffer[60];
+    uint8_t buffer[128];
 
     pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
     pb_encode(&stream, DeviceRegisterRequest_fields, &regReq);
 
-    // Serial.println("raw buffer");
-    // for (int i = 0; i < stream.bytes_written; i++) {
-    //     Serial.print(buffer[i], HEX);
-    //     Serial.print(" ");
-    // }
-    // Serial.println("");
-    // Serial.println("---");
-
     size_t size = stream.bytes_written;
     char data[size + 1];
     memcpy(&data, &buffer, size);
-
     data[size] = '\0';
 
     mqttClient.subscribe("oblivion/discover-device_register_response-" + deviceId);
     Serial.println("Subscribe to oblivion/discover-device_register_response-" + deviceId);
     bool result = mqttClient.publish("oblivion/discover-device_register", data);
-    // Serial.println("Send Result:");
-    // Serial.println(result);
-    // Serial.println(mqttClient.lastError());
 
     while (!isRegistered) {
         mqttClient.loop();
         delay(200);
     }
 
-    /*RegisterRequest regReq = {
-        device_name: device_name_tmp,
-        device_type: device_type,
-        device_mac: device_mac_tmp
-    };*/
-    delay(1000);
-    Serial.println("Done!");
-    WiFi.disconnect();
+    return true;
+}
 
-    ESP.deepSleep(15e6);
+RunRecord loadLocalRunRecord() {
+    RunRecord runRec = RunRecord_init_zero;
+    bool result = loadAndDecodeLocalFile(RunRecordFilename, runRec, RunRecord_fields);
+    return runRec;
 }
 
 DeviceConfig loadLocalDeviceConf() {
-    File fileHandle = SPIFFS.open(ConfigFilename, "r");
-    if (!fileHandle) {
-        // config file does not exist
-        fileHandle.close();
-        return discoverCenter();
+    DeviceConfig deviceConf = DeviceConfig_init_zero;
+    bool result = loadAndDecodeLocalFile(ConfigFilename, deviceConf, DeviceConfig_fields);
+
+    if (result && deviceConf.mqtt_port != 0) {
+        return deviceConf;
     }
     else {
-        Serial.println("Found Local Device Config File");
-        size_t fileSize = fileHandle.size();
-        uint8_t buffer[fileSize];
-
-        for (unsigned int i = 0; i < fileSize; i++) {
-            buffer[i] = fileHandle.read();
-        }
-        fileHandle.close();
-
-        // Decode Discover Response
-        DeviceConfig deviceConf = DeviceConfig_init_zero;
-        pb_istream_t is_stream = pb_istream_from_buffer(buffer, fileSize);
-        pb_decode(&is_stream, DeviceConfig_fields, &deviceConf);
-
-        if (deviceConf.mqtt_port != 0) {
-            return deviceConf;
-        }
-        else {
-            Serial.println("Incorrect Conf, fetching new Conf");
-            return discoverCenter();
-        }
+        Serial.println("Incorrect Conf, fetching new Conf");
+        return deviceConf;
     }
 }
 
@@ -242,59 +252,60 @@ DeviceConfig discoverCenter() {
         return deviceConf;
     }
 
-    stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
-    pb_encode(&stream, DeviceConfig_fields, &deviceConf);
-
-    File fileHandle = SPIFFS.open(ConfigFilename, "w");
-    int bytesWritten = fileHandle.write((char*)buffer, sizeof(buffer));
-    if (bytesWritten == 0) {
-        Serial.println("Save Config Failed");
-        return deviceConf;
-    }
-    fileHandle.close();
+    saveDeviceConfig(deviceConf);
 
     return deviceConf;
 }
 
+inline boolean saveDeviceConfig(DeviceConfig& deviceConf) {
+    return encodeAndSaveLocalFile(ConfigFilename, &deviceConf, DeviceConfig_fields);
+}
+
 boolean connectToWifi() {
-    WiFi.disconnect();
-    delay(1);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFINAME, WIFIPW);
-    Serial.print("Connecting..");
+    if (!false) {
+        WiFi.disconnect();
+        delay(1);
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(WIFINAME, WIFIPW);
+        Serial.print("Connecting..");
 
-    //uint8_t connect_result;
-    //connect_result = WiFi.waitForConnectResult();
-    //Serial.println("Connect Result:");
-    //Serial.println(connect_result);
+        //uint8_t connect_result;
+        //connect_result = WiFi.waitForConnectResult();
+        //Serial.println("Connect Result:");
+        //Serial.println(connect_result);
 
-    int i = 0;
-    boolean state = true;
-    while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-        Serial.print(WiFi.localIP().toString());
-        Serial.println(WiFi.status());
-        i++;
+        int i = 0;
+        boolean state = true;
+        while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+            delay(200);
+            Serial.print(".");
+            Serial.print(WiFi.localIP().toString());
+            Serial.println(WiFi.status());
+            i++;
 
-        if (i > 50) {
-            state = false;
-            break;
+            if (i > 50) {
+                state = false;
+                break;
+            }
         }
-    }
 
-    if (state) {
-        Serial.println("Connected");
-        Serial.println("IP Address:");
-        Serial.println(WiFi.localIP());
-        broadcastIp = ~uint32_t(WiFi.subnetMask()) | uint32_t(WiFi.gatewayIP());
+        if (state) {
+            Serial.println("Connected");
+            Serial.println("IP Address:");
+            Serial.println(WiFi.localIP());
+            broadcastIp = ~uint32_t(WiFi.subnetMask()) | uint32_t(WiFi.gatewayIP());
+            isConnectedToWifi = true;
+        }
+        else {
+            Serial.println("Connection failed.");
+        }
+
+        // return connect_result == 1;
+        return state;
     }
     else {
-        Serial.println("Connection failed.");
+        return isConnectedToWifi;
     }
-
-    // return connect_result == 1;
-    return state;
 }
 
 void loop() {

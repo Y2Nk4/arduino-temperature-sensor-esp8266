@@ -11,8 +11,6 @@
 		#include "WProgram.h"
 	#endif
 
-    
-
     void LogReceivedMessage(char topic[], char buffer[], int payloadLength) {
         Serial.println("Received MQTT Message");
         Serial.println(topic);
