@@ -72,15 +72,15 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)src\protobuf\generated_nanopb;$(SolutionDir)dependence\nanopb;$(SolutionDir)src\lib;$(IncludePath)</IncludePath>
-    <ReferencePath>C:\Users\11476\Documents\Arduino\libraries\*;$(ReferencePath)</ReferencePath>
+    <IncludePath>$(SolutionDir)src\protobuf\generated_nanopb;$(SolutionDir)dependence\nanopb;$(SolutionDir)src\lib;$(SolutionDir)src;$(IncludePath)</IncludePath>
+    <ReferencePath>C:\Users\11476\Documents\Arduino\libraries\*;$(SolutionDir)src\protobuf\generated_nanopb;$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\libraries\ESP8266WiFi\src;C:\Users\11476\Documents\Arduino\libraries\DHT_sensor_library;C:\Users\11476\Documents\Arduino\libraries\Nanopb;C:\Users\11476\Documents\Arduino\libraries\MQTT\src;C:\Users\11476\Documents\Arduino\libraries\Adafruit_Unified_Sensor;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266\avr;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266\libb64;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266\spiffs;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266\umm_malloc;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\variants\d1_mini;$(ProjectDir)..\Oblivion-temperature-node-esp8266;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\tools\sdk\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\tools\sdk\lwip2\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\tools\sdk\libc\xtensa-lx106-elf\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\2.5.0-4-b40a506\xtensa-lx106-elf\include\c++\4.8.2;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\2.5.0-4-b40a506\xtensa-lx106-elf\include\c++\4.8.2\xtensa-lx106-elf;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\2.5.0-4-b40a506\xtensa-lx106-elf\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\2.5.0-4-b40a506\lib\gcc\xtensa-lx106-elf\4.8.2\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\tools\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;C:\Users\11476\Documents\Arduino\libraries\DHT_sensor_library;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\libraries\ESP8266WiFi\src;C:\Users\11476\Documents\Arduino\libraries\Nanopb;C:\Users\11476\Documents\Arduino\libraries\MQTT\src;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\libraries\Wire;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\libraries\SPI;C:\Users\11476\Documents\Arduino\libraries\Adafruit_Unified_Sensor;C:\Users\11476\Documents\Arduino\libraries\Adafruit_BME280_Library;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266\avr;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266\libb64;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266\spiffs;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\cores\esp8266\umm_malloc;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\variants\d1_mini;$(ProjectDir)..\Oblivion-temperature-node-esp8266;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\tools\sdk\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\tools\sdk\lwip2\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\tools\sdk\libc\xtensa-lx106-elf\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\2.5.0-4-b40a506\xtensa-lx106-elf\include\c++\4.8.2;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\2.5.0-4-b40a506\xtensa-lx106-elf\include\c++\4.8.2\xtensa-lx106-elf;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\2.5.0-4-b40a506\xtensa-lx106-elf\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\2.5.0-4-b40a506\lib\gcc\xtensa-lx106-elf\4.8.2\include;C:\Users\11476\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\2.7.4\tools\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\__vm\.Oblivion-temperature-node-esp8266.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
       <PreprocessorDefinitions>__ESP8266_esp8266__;__ESP8266_ESP8266__;_VMDEBUG=1;__ets__;ICACHE_FLASH;NONOSDK22x_190703=1;F_CPU=80000000L;LWIP_OPEN_SRC;TCP_MSS=536;LWIP_FEATURES=1;LWIP_IPV6=0;ARDUINO=108013;ARDUINO_ESP8266_WEMOS_D1MINI;ARDUINO_ARCH_ESP8266;FLASHMODE_DIO;ESP8266;__cplusplus=201103L;_VMICRO_INTELLISENSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -110,10 +110,11 @@
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)src\protobuf\generated_nanopb;$(SolutionDir)dependence\nanopb;$(SolutionDir)src\lib;$(IncludePath)</IncludePath>
-    <ReferencePath>C:\Users\11476\Documents\Arduino\libraries\*;$(ReferencePath)</ReferencePath>
+    <IncludePath>$(SolutionDir)src\protobuf\generated_nanopb;$(SolutionDir)dependence\nanopb;$(SolutionDir)src\lib;$(SolutionDir)src;$(IncludePath)</IncludePath>
+    <ReferencePath>C:\Users\11476\Documents\Arduino\libraries\*;$(SolutionDir)src\protobuf\generated_nanopb;$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <ItemGroup>
+    <None Include=".gitignore" />
     <None Include="src\arduino folders read me.txt">
     </None>
     <None Include="src\Oblivion-temperature-node-esp8266.ino" />
@@ -121,13 +122,12 @@
   <ItemGroup>
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\lib\debug.h" />
+    <ClInclude Include="src\lib\encoder.h" />
     <ClInclude Include="src\lib\helpers.h" />
+    <ClInclude Include="src\lib\storage.h" />
     <ClInclude Include="src\protobuf\generated_nanopb\device_discover.pb.h" />
     <ClInclude Include="src\protobuf\generated_nanopb\temperature_node.pb.h" />
     <ClInclude Include="__vm\.Oblivion-temperature-node-esp8266.vsarduino.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="src\lib\helpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Oblivion-temperature-node-esp8266.rc" />

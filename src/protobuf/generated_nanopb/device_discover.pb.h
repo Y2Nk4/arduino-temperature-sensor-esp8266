@@ -49,6 +49,8 @@ typedef struct _RunRecord {
 
 typedef struct _TemperatureRecord {
     float temperature_value;
+    float humidity_value;
+    float pressure_value;
     uint32_t delta;
 } TemperatureRecord;
 
@@ -60,14 +62,14 @@ typedef struct _TemperatureRecord {
 #define DeviceRegisterResponse_init_default      {0}
 #define DeviceConfig_init_default                {0, 0, {{NULL}, NULL}, 0}
 #define RunRecord_init_default                   {0, {{NULL}, NULL}}
-#define TemperatureRecord_init_default           {0, 0}
+#define TemperatureRecord_init_default           {0, 0, 0, 0}
 #define DiscoverRequest_init_zero                {0, 0}
 #define DiscoverResponse_init_zero               {0, 0, {{NULL}, NULL}}
 #define DeviceRegisterRequest_init_zero          {"", "", 0}
 #define DeviceRegisterResponse_init_zero         {0}
 #define DeviceConfig_init_zero                   {0, 0, {{NULL}, NULL}, 0}
 #define RunRecord_init_zero                      {0, {{NULL}, NULL}}
-#define TemperatureRecord_init_zero              {0, 0}
+#define TemperatureRecord_init_zero              {0, 0, 0, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define DeviceConfig_mqtt_ip_tag                 1
@@ -86,7 +88,9 @@ typedef struct _TemperatureRecord {
 #define RunRecord_run_count_tag                  1
 #define RunRecord_temperature_record_tag         2
 #define TemperatureRecord_temperature_value_tag  1
-#define TemperatureRecord_delta_tag              2
+#define TemperatureRecord_humidity_value_tag     2
+#define TemperatureRecord_pressure_value_tag     3
+#define TemperatureRecord_delta_tag              4
 
 /* Struct field encoding specification for nanopb */
 #define DiscoverRequest_FIELDLIST(X, a) \
@@ -131,7 +135,9 @@ X(a, CALLBACK, REPEATED, MESSAGE,  temperature_record,   2)
 
 #define TemperatureRecord_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, FLOAT,    temperature_value,   1) \
-X(a, STATIC,   SINGULAR, UINT32,   delta,             2)
+X(a, STATIC,   SINGULAR, FLOAT,    humidity_value,    2) \
+X(a, STATIC,   SINGULAR, FLOAT,    pressure_value,    3) \
+X(a, STATIC,   SINGULAR, UINT32,   delta,             4)
 #define TemperatureRecord_CALLBACK NULL
 #define TemperatureRecord_DEFAULT NULL
 
@@ -159,7 +165,7 @@ extern const pb_msgdesc_t TemperatureRecord_msg;
 #define DeviceRegisterResponse_size              2
 /* DeviceConfig_size depends on runtime parameters */
 /* RunRecord_size depends on runtime parameters */
-#define TemperatureRecord_size                   11
+#define TemperatureRecord_size                   21
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -5,12 +5,10 @@
 */
 
 #define DEBUG
-
 #include "lib/debug.h"
 
 #include "user_interface.h"
 #include "Esp.h"
-
 #include "DHT.h"
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
@@ -25,10 +23,18 @@
 #include <MQTT.h>
 #include <FS.h>
 
+#include <Wire.h>
+#include <SPI.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
 #include "lib/helpers.h"
 #include "lib/storage.h"
+#include "lib/encoder.h"
 
-#define DHTPIN 0
+Adafruit_BME280 bme; // I2C
+
+#define DHTPIN 2
 #define DHTTYPE DHT22
 
 #define WIFINAME "ASUS-Home_2.4G"  
@@ -47,6 +53,30 @@ WiFiClient net;
 bool isRegistered = false;
 bool isConnectedToWifi = false;
 bool isConnectedToMQTT = false;
+
+
+typedef struct
+{
+    TemperatureRecord members[16];
+    size_t count = 0;
+
+    size_t size() {
+        return count;
+    }
+
+    size_t addToList(TemperatureRecord& item) {
+        members[count] = item;
+        count++;
+        return count;
+    }
+}
+TemperatureRecordList;
+typedef struct
+{
+    uint32_t run_count = 0;
+    TemperatureRecordList temperature_record;
+}
+ActualRunRecord;
 
 void messageReceived(MQTTClient* client, char topic[], char buffer[], int payloadLength) {
     LogReceivedMessage(topic, buffer, payloadLength);
@@ -113,15 +143,41 @@ void setup() {
         }
     }
 
-    RunRecord runRec = loadLocalRunRecord();
+    /*while (false) {
+        float t = dht.readTemperature();
+        Serial.print("Temperature: ");
+        Serial.println(t);
+        delay(2000);
+    }*/
+
+    ActualRunRecord runRec = loadLocalRunRecord();
+    // Serial.println(runRec.temperature_record_count);
+
+    Serial.print("run_count: ");
+    Serial.println(runRec.run_count);
+    Serial.print("TmpRec Length: ");
+    Serial.println(runRec.temperature_record.size());
+
     if (runRec.run_count < 5) {
-        while (true) {
-            float t = dht.readTemperature();
-            Serial.print(F("Temperature: "));
-            Serial.println(t);
-            delay(2000);
-        }
+        float t = dht.readTemperature();
+        TemperatureRecord tmpRec = TemperatureRecord_init_zero;
+        tmpRec.temperature_value = t;
+        tmpRec.delta = runRec.run_count;
+
+        runRec.run_count++;
+        runRec.temperature_record.addToList(tmpRec);
     }
+    else {
+        // reset TemperatureRecordList
+        Serial.println("Upload and reset");
+        runRec.run_count = 0;
+        TemperatureRecordList newList;
+        runRec.temperature_record = newList;
+    }
+    saveRunRecord(runRec);
+
+    Serial.print("New TmpRec Length: ");
+    Serial.println(runRec.temperature_record.size());
 
     Serial.println("Done!");
     WiFi.disconnect();
@@ -184,10 +240,90 @@ boolean registerDevice(DeviceConfig& deviceConf) {
     return true;
 }
 
-RunRecord loadLocalRunRecord() {
-    RunRecord runRec = RunRecord_init_zero;
-    bool result = loadAndDecodeLocalFile(RunRecordFilename, runRec, RunRecord_fields);
-    return runRec;
+ActualRunRecord loadLocalRunRecord() {
+    ActualRunRecord actRunRec;
+    
+    File fileHandle = SPIFFS.open(RunRecordFilename, "r");
+    if (!fileHandle) {
+        // config file does not exist
+        fileHandle.close();
+        return actRunRec;
+    }
+    else {
+        Serial.println("Found Local Device Config File");
+        size_t fileSize = fileHandle.size();
+
+        RunRecord runRec = RunRecord_init_zero;
+        uint8_t buffer[fileSize + 1];
+
+        for (unsigned int i = 0; i < fileSize; i++) {
+            buffer[i] = fileHandle.read();
+        }
+        buffer[fileSize] = '\0';
+        fileHandle.close();
+
+        Serial.println("loaded buffer:");
+        for (int i = 0; i < fileSize; i++) {
+            Serial.print(buffer[i], HEX);
+            Serial.print(" ");
+        }
+        Serial.println("");
+
+        TemperatureRecordList tmpList;
+
+        runRec.temperature_record.arg = &tmpList;
+        runRec.temperature_record.funcs.decode = decode_temperature_record;
+
+        pb_istream_t is_stream = pb_istream_from_buffer(buffer, fileSize);
+        pb_decode(&is_stream, RunRecord_fields, &runRec);
+        // runRec.temperature_record = tmpRecLists.members;
+        // bool result = loadAndDecodeLocalFile(RunRecordFilename, runRec, RunRecord_fields);
+        actRunRec.run_count = runRec.run_count;
+        actRunRec.temperature_record = tmpList;
+
+        return actRunRec;
+    }
+}
+
+bool decode_temperature_record(pb_istream_t* istream, const pb_field_t* field, void** arg)
+{
+    TemperatureRecordList* tmpRecLists = (TemperatureRecordList*)(*arg);
+
+    // decode single instance
+    TemperatureRecord tempData = TemperatureRecord_init_zero;
+    
+    if (!pb_decode(istream, TemperatureRecord_fields, &tempData)) {
+        const char* error = PB_GET_ERROR(istream);
+        Serial.printf("dncode error: %s", error);
+        return false;
+    }
+
+    (*tmpRecLists).addToList(tempData);
+    return true;
+}
+
+bool encode_temperature_record(pb_ostream_t* ostream, const pb_field_t* field, void* const* arg)
+{
+    TemperatureRecordList tmpRecLists = *(TemperatureRecordList*)*arg;
+
+    // encode all numbers
+    for (int i = 0; i < tmpRecLists.size(); i++)
+    {
+        if (!pb_encode_tag_for_field(ostream, field))
+        {
+            const char* error = PB_GET_ERROR(ostream);
+            Serial.printf("SimpleMessage_encode_numbers error: %s", error);
+            return false;
+        }
+
+        if (!pb_encode_submessage(ostream, TemperatureRecord_fields, &(tmpRecLists.members[i]))) {
+            const char* error = PB_GET_ERROR(ostream);
+            Serial.printf("encode error: %s", error);
+            return false;
+        }
+    }
+
+    return true;
 }
 
 DeviceConfig loadLocalDeviceConf() {
@@ -259,6 +395,27 @@ DeviceConfig discoverCenter() {
 
 inline boolean saveDeviceConfig(DeviceConfig& deviceConf) {
     return encodeAndSaveLocalFile(ConfigFilename, &deviceConf, DeviceConfig_fields);
+}
+
+inline boolean saveRunRecord(ActualRunRecord& actRunRec) {
+    RunRecord runRec = RunRecord_init_zero;
+    uint8_t buffer[128];
+
+    runRec.run_count = actRunRec.run_count;
+    runRec.temperature_record.arg = &(actRunRec.temperature_record);
+    runRec.temperature_record.funcs.encode = encode_temperature_record;
+    
+    pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+    pb_encode(&stream, RunRecord_fields, &runRec);
+
+    Serial.println("data save:");
+    for (int i = 0; i < stream.bytes_written; i++) {
+        Serial.print(buffer[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println("");
+
+    return writeBufferToFile(RunRecordFilename, (char*)&buffer, stream.bytes_written);
 }
 
 boolean connectToWifi() {

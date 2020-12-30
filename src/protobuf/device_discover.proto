@@ -33,5 +33,7 @@ message RunRecord {
 
 message TemperatureRecord {
     float temperature_value = 1;
-    uint32 delta = 2;
+    float humidity_value = 2;
+    float pressure_value = 3;
+    uint32 delta = 4;
 }
