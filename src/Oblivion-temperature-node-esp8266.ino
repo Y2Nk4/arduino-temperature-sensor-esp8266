@@ -4,7 +4,7 @@
  Author:	11476
 */
 
-#define DEBUG
+// #define DEBUG
 #include "lib/debug.h"
 
 #include "user_interface.h"
@@ -36,6 +36,8 @@ Adafruit_BME280 bme; // I2C
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
+#define MEASURE_INTERVAL 15
+#define DEEPSLEEP_INTERVAL MEASURE_INTERVAL*1e6
 
 #define WIFINAME "ASUS-Home_2.4G"  
 #define WIFIPW   "asdqwe123" 
@@ -123,9 +125,9 @@ void setup() {
         }
 
         // prepare to register
-        Serial.println("storage data:");
-        Serial.println(deviceConf.mqtt_port);
-        Serial.println(deviceConf.mqtt_ip);
+        // Serial.println("storage data:");
+        // Serial.println(deviceConf.mqtt_port);
+        // Serial.println(deviceConf.mqtt_ip);
 
         IPAddress mqtt_ip = IPAddress(deviceConf.mqtt_ip);
         Serial.println(mqtt_ip.toString());
@@ -153,23 +155,31 @@ void setup() {
     ActualRunRecord runRec = loadLocalRunRecord();
     // Serial.println(runRec.temperature_record_count);
 
-    Serial.print("run_count: ");
+    /*Serial.print("run_count: ");
     Serial.println(runRec.run_count);
     Serial.print("TmpRec Length: ");
-    Serial.println(runRec.temperature_record.size());
+    Serial.println(runRec.temperature_record.size());*/
 
-    if (runRec.run_count < 5) {
-        float t = dht.readTemperature();
-        TemperatureRecord tmpRec = TemperatureRecord_init_zero;
-        tmpRec.temperature_value = t;
-        tmpRec.delta = runRec.run_count;
+    float t = dht.readTemperature();
+    TemperatureRecord tmpRec = TemperatureRecord_init_zero;
+    tmpRec.temperature_value = t;
+    tmpRec.delta = runRec.run_count;
 
-        runRec.run_count++;
-        runRec.temperature_record.addToList(tmpRec);
-    }
-    else {
+    runRec.run_count++;
+    runRec.temperature_record.addToList(tmpRec);
+
+    if (runRec.run_count >= 5) {
         // reset TemperatureRecordList
-        Serial.println("Upload and reset");
+        connectToWifi();
+
+        IPAddress mqtt_ip = IPAddress(deviceConf.mqtt_ip);
+        Serial.print("\nconnecting to mqtt...");
+        String wifiMacString = WiFi.macAddress();
+        String deviceId = MQTT_ID_PREFIX + wifiMacString;
+        connectToMQTT(mqtt_ip, deviceConf.mqtt_port, deviceId);
+
+        reportTemperatureData(runRec.temperature_record);
+
         runRec.run_count = 0;
         TemperatureRecordList newList;
         runRec.temperature_record = newList;
@@ -179,10 +189,39 @@ void setup() {
     Serial.print("New TmpRec Length: ");
     Serial.println(runRec.temperature_record.size());
 
-    Serial.println("Done!");
+    // Serial.println("Done!");
     WiFi.disconnect();
 
-    ESP.deepSleep(15e6);
+    ESP.deepSleep(DEEPSLEEP_INTERVAL);
+}
+
+boolean reportTemperatureData(TemperatureRecordList& tempRecList) {
+    TemperatureNodeReport tmpNodeReport = TemperatureNodeReport_init_zero;
+
+    tmpNodeReport.temperature_record.arg = &tempRecList;
+    tmpNodeReport.temperature_record.funcs.encode = encode_temperature_record;
+
+    tmpNodeReport.device_mac = getMacAddr();
+    tmpNodeReport.measure_interval = MEASURE_INTERVAL;
+
+    uint8_t buffer[128];
+    pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+    pb_encode(&stream, TemperatureNodeReport_fields, &tmpNodeReport);
+
+    size_t size = stream.bytes_written;
+    char sendData[size + 1];
+    memcpy(sendData, buffer, size);
+    sendData[size] = '\0';
+
+    bool result = mqttClient.publish("oblivion/temperature_report", sendData, size);
+    delay(50);
+
+    if (!result) {
+        Serial.print("MQTT Error: ");
+        Serial.println(mqttClient.lastError());
+    }
+
+    return result;
 }
 
 boolean connectToMQTT(const IPAddress brokerIP, const unsigned int brokerPort, const String& deviceId) {
@@ -215,8 +254,7 @@ boolean registerDevice(DeviceConfig& deviceConf) {
         Serial.print(regReq.device_type[i]);
     }
 
-    uint64_t macAddr = getMacAddr();
-    regReq.device_mac = macAddr;
+    regReq.device_mac = getMacAddr();
 
     uint8_t buffer[128];
 

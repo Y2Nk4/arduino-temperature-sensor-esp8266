@@ -22,9 +22,6 @@
     <None Include=".gitignore" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="__vm\.Oblivion-temperature-node-esp8266.vsarduino.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\lib\helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -40,10 +37,7 @@
     <ClInclude Include="src\lib\encoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\protobuf\generated_nanopb\device_discover.pb.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\protobuf\generated_nanopb\temperature_node.pb.h">
+    <ClInclude Include="__vm\.Oblivion-temperature-node-esp8266.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

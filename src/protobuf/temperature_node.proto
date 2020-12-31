@@ -1,8 +1,9 @@
 syntax = "proto3";
+import "device_discover.proto";
 
 message TemperatureNodeReport {
-	repeated float temperature = 1;
-	repeated float humidity = 2;
-	float battery_vcc = 3;
-	uint32 rec_delta = 4;
+    repeated TemperatureRecord temperature_record= 1;
+    float battery_vcc = 2;
+    uint64 device_mac = 3;
+    uint32 measure_interval = 4;
 }
